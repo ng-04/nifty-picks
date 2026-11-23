@@ -125,6 +125,7 @@
       <nav class="tabs" role="tablist" aria-label="Sections">
         <button class="tab" role="tab" data-tab="today" aria-selected="true">Today</button>
         <button class="tab" role="tab" data-tab="holdings" aria-selected="false">My holdings</button>
+        <button class="tab" role="tab" data-tab="sell" aria-selected="false">Sell review</button>
         <button class="tab" role="tab" data-tab="paper" aria-selected="false">Paper portfolio</button>
         <button class="tab" role="tab" data-tab="backtest" aria-selected="false">Backtest</button>
         <button class="tab" role="tab" data-tab="method" aria-selected="false">Method</button>
@@ -214,6 +215,27 @@
             <p class="cap" id="h-backup-msg" hidden></p>
           </div>
         </details>
+      </section>
+
+      <!-- SELL REVIEW -->
+      <section data-panel="sell" hidden>
+        <div class="block">
+          <h2>Which of your holdings to sell</h2>
+          <p>A <b>Sell</b> needs all three together: the 50-day average below the 200-day average, the price below its 200-day average, and 12-1 momentum in the bottom quarter of the Nifty 500. From 2019 to 2026 such stocks trailed everything else in 7 of 8 years: about 1.7 points less return per quarter, and a 24% chance of falling 10% or more against 19%. <b>Review</b> = momentum in the bottom 10% or a technical score under 25. <b>Keep</b> = on the buy list or in the top 20.</p>
+          <p class="cap">The evidence is modest, and low model scores alone did not predict losses. A verdict is a prompt to decide, not an order. Selling a gain can create capital-gains tax and selling a loss can offset gains. ETFs are not rated.</p>
+        </div>
+        <div class="tiles">
+          <div class="tile"><span class="cap">Sell</span><span class="big neg" id="s-n-sell"></span><span class="cap" id="s-v-sell"></span></div>
+          <div class="tile"><span class="cap">Review</span><span class="big warn" id="s-n-review"></span><span class="cap" id="s-v-review"></span></div>
+          <div class="tile"><span class="cap">Hold or keep</span><span class="big pos" id="s-n-hold"></span><span class="cap" id="s-n-keep"></span></div>
+        </div>
+        <div class="block">
+          <h2>Your holdings, worst first</h2>
+          <div class="scroll"><table aria-label="Sell review"><thead><tr>
+            <th>Stock</th><th>Verdict</th><th>Why</th><th class="n">Value ₹</th><th class="n">Your gain</th><th class="n">Rank</th><th class="n">Technical</th><th class="n">Graham</th><th class="n">Chance +5%, quarter</th><th>Signals today</th>
+          </tr></thead><tbody id="s-body"></tbody></table></div>
+          <p class="cap">Uses the holdings saved in this browser. Rank is among the Nifty 500 screen; holdings outside the index show the rank they would have.</p>
+        </div>
       </section>
 
       <!-- PAPER -->
@@ -483,7 +505,7 @@
     drawCharts();
   }
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => show(t.dataset.tab)));
-  const h0 = location.hash.slice(1); if (['today', 'holdings', 'paper', 'backtest', 'method'].includes(h0)) show(h0);
+  const h0 = location.hash.slice(1); if (['today', 'holdings', 'sell', 'paper', 'backtest', 'method'].includes(h0)) show(h0);
 
   // ---------- holdings (encrypted in localStorage) ----------
   let HOLD = [];
@@ -504,8 +526,8 @@
     const rows = HOLD.map((h) => { const m = u.get(h.symbol); const close = m ? +m.close : null;
       const gain = close != null ? 100 * (close / h.price - 1) : null;
       const flagged = m ? (['DROPPED', 'DOWNGRADED'].includes(m.status) || (!m.on_list && m.rank > 20)) : false;
-      return { ...h, m, close, gain, gain_rs: close != null && h.qty ? (close - h.price) * h.qty : null, days: Math.round((asof - pd(h.bought_on)) / 864e5), flagged }; })
-      .sort((a, b) => (b.flagged - a.flagged) || b.bought_on.localeCompare(a.bought_on));
+      return { ...h, m, close, gain, gain_rs: close != null && h.qty ? (close - h.price) * h.qty : null, days: h.bought_on ? Math.round((asof - pd(h.bought_on)) / 864e5) : null, flagged }; })
+      .sort((a, b) => (b.flagged - a.flagged) || String(b.bought_on || '').localeCompare(String(a.bought_on || '')));
     fill('h-body', rows, (r) => { const tr = el('tr', r.flagged ? 'r-flag' : ''); stock(tr, r.symbol, r.m ? r.m.company : null);
       td(tr, fmtDate(r.bought_on)); td(tr, num(r.price, 2), 'n'); td(tr, r.qty ? num(r.qty) : '—', 'n'); td(tr, r.close == null ? '—' : num(r.close, 2), 'n'); signed(tr, r.gain);
       const g = td(tr, r.gain_rs == null ? '—' : (r.gain_rs >= 0 ? '+' : '−') + inr(Math.abs(r.gain_rs)), 'n'); if (r.gain_rs > 0) g.classList.add('pos'); if (r.gain_rs < 0) g.classList.add('neg');
@@ -523,6 +545,28 @@
     const gp = inv ? 100 * (val / inv - 1) : null; $('h-gain').textContent = pp(gp); $('h-gain').className = 'big ' + (gp > 0 ? 'pos' : gp < 0 ? 'neg' : '');
     $('h-gain-sub').textContent = `${inv ? (val - inv >= 0 ? '+' : '−') + inr(Math.abs(val - inv)) : '—'} · ${rows.filter((r) => r.flagged).length} need a look`;
     const s = ls.get(LS_HOLD); $('h-backup').value = s ? btoa(s) : '';
+    renderSell();
+  }
+  function renderSell() {
+    const ORDER = { SELL: 0, REVIEW: 1, HOLD: 2, KEEP: 3, 'NOT RATED': 4, 'NOT COVERED': 5 };
+    const CLS = { SELL: 'DROPPED', REVIEW: 'DOWNGRADED', HOLD: 'KEPT', KEEP: 'NEW', 'NOT RATED': 'KEPT', 'NOT COVERED': 'KEPT' };
+    const u = new Map((DAILY.universe || []).map((r) => [r.symbol, r]));
+    const rows = d3.rollups(HOLD, (hs) => { const sym = hs[0].symbol; const m = u.get(sym);
+      const qty = d3.sum(hs, (h) => +h.qty || 0), cost = d3.sum(hs, (h) => (+h.qty || 0) * (+h.price || 0)); const value = m ? qty * +m.close : null;
+      return { symbol: sym, m, verdict: m ? m.verdict : 'NOT COVERED', reasons: m ? m.verdict_reasons : 'Not in the daily screen yet: ask Claude to add it.',
+        value, gain: m && cost > 0 ? 100 * (value / cost - 1) : null }; }, (h) => h.symbol).map(([, v]) => v)
+      .sort((a, b) => (ORDER[a.verdict] - ORDER[b.verdict]) || ((b.value || 0) - (a.value || 0)));
+    const cnt = (v) => rows.filter((r) => v.includes(r.verdict)), val = (v) => d3.sum(cnt(v), (r) => r.value || 0);
+    $('s-n-sell').textContent = cnt(['SELL']).length; $('s-v-sell').textContent = inr(val(['SELL'])) + ' at the latest close';
+    $('s-n-review').textContent = cnt(['REVIEW']).length; $('s-v-review').textContent = inr(val(['REVIEW'])) + ' at the latest close';
+    $('s-n-hold').textContent = cnt(['HOLD', 'KEEP']).length; $('s-n-keep').textContent = `${cnt(['KEEP']).length} of them on the buy list or in the top 20`;
+    fill('s-body', rows, (r) => { const tr = el('tr', r.verdict === 'SELL' ? 'r-drop' : r.verdict === 'REVIEW' ? 'r-down' : '');
+      stock(tr, r.symbol, r.m ? r.m.company : null);
+      const v = el('td'); v.appendChild(el('span', 'pill ' + CLS[r.verdict], r.verdict[0] + r.verdict.slice(1).toLowerCase())); tr.appendChild(v);
+      td(tr, r.reasons || '', 'cap'); td(tr, inr(r.value), 'n'); signed(tr, r.gain);
+      td(tr, r.m ? r.m.rank : '—', 'n'); bar(tr, r.m ? r.m.tech_score : null); bar(tr, r.m ? r.m.graham_score : null);
+      td(tr, r.m ? pct(r.m.p63) : '—', 'n'); td(tr, r.m && r.m.signals_today ? r.m.signals_today : '—', 'cap'); return tr; },
+      'No holdings saved in this browser yet. Add them on the My holdings tab, or import the backup.', 10);
   }
   $('hold-form').addEventListener('submit', async (e) => {
     e.preventDefault();
