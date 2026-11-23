@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Nifty Picks</title>
+<style>
+  /* Layout: one centred column of panels; tabs switch sections. Ledger-like: quiet neutrals, one ink-blue accent. */
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --fg: #15191f; --muted: #5b6573; --line: #dde2e8;
+    --accent: #1f4fd1; --ok: #127a46; --warn: #a35d00; --bad: #c0352b; --grid: #e9edf2;
+    --c0: #1f4fd1; --c1: #d0742a; --c2: #2f9e7a; --c3: #8a5cd1; --c4: #b8456b; --c5: #7d8794; --c6: #4d5966;
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --panel: #171b21; --fg: #e8ebef; --muted: #98a2b0; --line: #2a313a;
+      --accent: #7c9cff; --ok: #4cc38a; --warn: #f0a648; --bad: #ff7a6e; --grid: #222830;
+      --c0: #7c9cff; --c1: #f0a05c; --c2: #5cd1a7; --c3: #b592ff; --c4: #f07ca3; --c5: #9aa4b1; --c6: #c4ccd6; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font); }
+  body { padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); }
+  .wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 28px; }
+  h1 { font-size: 1.75rem; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 1.15rem; font-weight: 600; margin: 0; text-wrap: balance; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 0; }
+  p { margin: 0; max-width: 75ch; }
+  .muted { color: var(--muted); } .cap { font-size: .82rem; color: var(--muted); }
+  .pos { color: var(--ok); } .neg { color: var(--bad); } .warn { color: var(--warn); }
+  .num { font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+
+  /* lock */
+  .lock { min-height: 80vh; display: grid; place-items: center; }
+  .lock form { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 28px; display: grid; gap: 14px; }
+  .lock h1 { font-size: 1.4rem; }
+  input, button { font: inherit; }
+  .field { display: grid; gap: 6px; min-width: 0; }
+  input[type=text], input[type=password], input[type=date], input[type=number], textarea {
+    width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); }
+  textarea { font-family: var(--mono); font-size: .8rem; min-height: 90px; resize: vertical; }
+  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  .btn-ghost { background: none; color: var(--fg); border: 1px solid var(--line); }
+  .link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: .82rem; }
+  .link.armed { color: var(--bad); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: .85rem; color: var(--muted); }
+
+  /* header + tabs */
+  .top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+  .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; color: var(--muted); cursor: pointer; }
+  .tab[aria-selected=true] { color: var(--fg); border-bottom-color: var(--accent); }
+  section { display: grid; gap: 28px; }
+  .block { display: grid; gap: 12px; min-width: 0; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 4px; align-content: start; }
+  .big { font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+
+  .scroll { overflow-x: auto; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: .9rem; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: .76rem; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: bottom; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr.r-new td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+  tr.r-down td:first-child, tr.r-flag td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+  tr.r-drop td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
+  .sym { font-weight: 600; } .sub { display: block; font-size: .76rem; color: var(--muted); font-weight: 400; }
+  .pill { display: inline-block; padding: 0 8px; border-radius: 999px; font-size: .74rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+  .pill.NEW { color: var(--ok); } .pill.KEPT { color: var(--muted); } .pill.DOWNGRADED { color: var(--warn); } .pill.DROPPED { color: var(--bad); }
+  .bar { display: inline-block; width: 46px; height: 6px; border-radius: 3px; background: var(--grid); vertical-align: middle; margin-right: 6px; position: relative; overflow: hidden; }
+  .bar > i { position: absolute; inset: 0 auto 0 0; background: currentColor; }
+  .changes { display: grid; gap: 8px; }
+  .change { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: baseline; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .change p { grid-column: 2; }
+
+  .chart { position: relative; min-height: 280px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  .chart svg text { fill: var(--muted); font-size: 11px; }
+  .chart .domain, .chart .tick line { stroke: var(--line); } .chart .grid line { stroke: var(--grid); }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; padding: 8px; font-size: .78rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 3px; margin-right: 6px; vertical-align: middle; background: var(--sw); }
+
+  .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .wide { grid-column: span 2; } @media (max-width: 480px) { .wide { grid-column: auto; } }
+  ul.method { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 80ch; }
+  details { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel); }
+  summary { cursor: pointer; font-weight: 600; }
+  @media (prefers-reduced-motion: no-preference) { .fade { animation: fade .25s ease-out; } @keyframes fade { from { opacity: .4 } to { opacity: 1 } } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- =============== LOCK =============== -->
+  <div class="lock" id="lock">
+    <form id="unlock-form" autocomplete="off">
+      <h1>Nifty Picks</h1>
+      <p class="muted">This site is encrypted. Enter your passphrase to decrypt it in this browser. Nothing you type is sent anywhere.</p>
+      <label class="field" for="pw"><span class="cap">Passphrase</span><input id="pw" type="password" autocomplete="current-password" required></label>
+      <label class="check" for="remember"><input id="remember" type="checkbox"> <span>Remember on this device. Anyone using this browser profile could then open the site.</span></label>
+      <button class="btn" id="unlock-btn" type="submit">Unlock</button>
+      <p class="cap neg" id="lock-msg" hidden></p>
+    </form>
+  </div>
+
+  <!-- =============== APP =============== -->
+  <div id="app" hidden>
+    <div class="wrap">
+      <header class="top">
+        <div style="display:grid;gap:6px">
+          <h1>Nifty Picks</h1>
+          <p id="takeaway" class="muted"></p>
+        </div>
+        <button class="btn btn-ghost" id="lock-btn" type="button">Lock</button>
+      </header>
+      <p class="cap">Nifty 500 stocks above ₹5,000 Cr market cap. Score = 70% technical (42 algorithms, backtested) + 30% Benjamin Graham fundamentals. "Chance" is the model's estimate of a gain of at least 5%. A research screen, not investment advice.</p>
+
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button class="tab" role="tab" data-tab="today" aria-selected="true">Today</button>
+        <button class="tab" role="tab" data-tab="holdings" aria-selected="false">My holdings</button>
+        <button class="tab" role="tab" data-tab="paper" aria-selected="false">Paper portfolio</button>
+        <button class="tab" role="tab" data-tab="backtest" aria-selected="false">Backtest</button>
+        <button class="tab" role="tab" data-tab="method" aria-selected="false">Method</button>
+      </nav>
+
+      <!-- TODAY -->
+      <section data-panel="today">
+        <div class="tiles">
+          <div class="tile"><span class="cap">Picks' chance of +5% in a quarter</span><span class="big" id="t-p63"></span><span class="cap" id="t-p63-sub"></span></div>
+          <div class="tile"><span class="cap">Picks' chance of +5% in a month</span><span class="big" id="t-p21"></span><span class="cap" id="t-p21-sub"></span></div>
+          <div class="tile"><span class="cap">Paper portfolio since start</span><span class="big" id="t-paper"></span><span class="cap" id="t-paper-sub"></span></div>
+        </div>
+        <div class="block"><h2>What changed since the last run</h2><div class="changes" id="changes"></div></div>
+        <div class="block">
+          <h2>The list</h2>
+          <p class="cap" id="list-rules"></p>
+          <div class="scroll"><table aria-label="Today's 10 picks"><thead><tr>
+            <th class="n">Rank</th><th>Stock</th><th>Status</th><th class="n">Score</th><th class="n">Technical</th><th class="n">Graham</th>
+            <th class="n">Chance, quarter</th><th class="n">Chance, month</th><th class="n">Close ₹</th><th class="n">Since entry</th><th>Change</th>
+          </tr></thead><tbody id="picks-body"></tbody></table></div>
+        </div>
+        <div class="block">
+          <h2>Technical breakdown</h2>
+          <p class="cap">Percentiles across today's universe (100 = most bullish). Technical score = average of the ML model and the algorithm vote. Family scores average every algorithm in the family, each read in the direction that worked in the backtest.</p>
+          <div class="scroll"><table aria-label="Technical breakdown"><thead><tr>
+            <th>Stock</th><th class="n">Technical</th><th class="n">ML model</th><th class="n">Algorithm vote</th>
+            <th class="n">Momentum (6)</th><th class="n">Trend (9)</th><th class="n">Breakout (3)</th><th class="n">Oscillators (6)</th><th class="n">Volatility (3)</th><th class="n">Volume (15)</th><th>Signals today</th>
+          </tr></thead><tbody id="tech-body"></tbody></table></div>
+          <h3>The eight voting algorithms</h3>
+          <div class="scroll"><table aria-label="Voting algorithms"><thead><tr id="voters-head"></tr></thead><tbody id="voters-body"></tbody></table></div>
+        </div>
+        <div class="block">
+          <h2>Graham breakdown</h2>
+          <p class="cap">0–100 points per rule (100 = meets the test). "vs own peak" compares today's P/E and P/B with their highest monthly average over the last ~3½ years: full points at half the peak or less. Below those bars: now / peak / median. A peak set in a low-earnings year flatters a stock, so check the median.</p>
+          <div class="scroll"><table aria-label="Graham breakdown"><thead><tr>
+            <th>Stock</th><th class="n">Graham</th><th>Industry</th><th class="n">P/E</th><th class="n">P/B</th>
+            <th class="n">P/E ≤ 15</th><th class="n">P/B ≤ 1.5</th><th class="n">Below Graham no.</th><th class="n">Current ratio ≥ 2</th><th class="n">Low debt</th>
+            <th class="n">Profitable yrs</th><th class="n">EPS growth</th><th class="n">Dividend record</th><th class="n">P/E vs own peak</th><th class="n">P/B vs own peak</th>
+          </tr></thead><tbody id="graham-body"></tbody></table></div>
+        </div>
+        <div class="block">
+          <h2>Next in line</h2>
+          <div class="scroll"><table aria-label="Runners-up"><thead><tr><th class="n">Rank</th><th>Stock</th><th class="n">Score</th><th class="n">Technical</th><th class="n">Graham</th><th class="n">Chance, quarter</th></tr></thead><tbody id="runners-body"></tbody></table></div>
+        </div>
+        <div class="block">
+          <h2>Change log</h2>
+          <div class="scroll"><table aria-label="Change log"><thead><tr><th>Date</th><th>Stock</th><th>Status</th><th class="n">Rank</th><th class="n">Close ₹</th><th>What happened</th><th>Signals</th></tr></thead><tbody id="log-body"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- HOLDINGS -->
+      <section data-panel="holdings" hidden>
+        <div class="block">
+          <h2>Record a purchase</h2>
+          <p class="cap">Stored in this browser only, encrypted with your passphrase. To use another device, copy the encrypted backup below and paste it there.</p>
+          <form class="form" id="hold-form" novalidate>
+            <label class="field" for="h-sym"><span class="cap">Stock (NSE symbol)</span><input id="h-sym" type="text" list="h-syms" autocomplete="off" placeholder="e.g. PNB"></label>
+            <datalist id="h-syms"></datalist>
+            <label class="field" for="h-date"><span class="cap">Bought on</span><input id="h-date" type="date"></label>
+            <label class="field" for="h-price"><span class="cap">Price per share ₹</span><input id="h-price" type="number" step="0.01" min="0.01" inputmode="decimal"></label>
+            <label class="field" for="h-qty"><span class="cap">Quantity (optional)</span><input id="h-qty" type="number" step="1" min="1" inputmode="numeric"></label>
+            <label class="field wide" for="h-note"><span class="cap">Note (optional)</span><input id="h-note" type="text" maxlength="140"></label>
+            <button class="btn" type="submit" id="h-save">Save purchase</button>
+          </form>
+          <p class="cap" id="h-msg" hidden></p>
+        </div>
+        <div class="tiles">
+          <div class="tile"><span class="cap">Invested</span><span class="big" id="h-invested"></span><span class="cap">Holdings with a quantity</span></div>
+          <div class="tile"><span class="cap">Value at latest close</span><span class="big" id="h-value"></span><span class="cap" id="h-asof"></span></div>
+          <div class="tile"><span class="cap">Gain</span><span class="big" id="h-gain"></span><span class="cap" id="h-gain-sub"></span></div>
+        </div>
+        <div class="block">
+          <h2>Your holdings</h2>
+          <p class="cap">"Needs a look" (amber edge) means the stock was dropped or downgraded on the latest run, or it isn't on the list and ranks below 20. That's a prompt to review, not a sell signal.</p>
+          <div class="scroll"><table aria-label="Your holdings"><thead><tr>
+            <th>Stock</th><th>Bought on</th><th class="n">Buy ₹</th><th class="n">Qty</th><th class="n">Latest ₹</th><th class="n">Gain</th><th class="n">Gain ₹</th><th class="n">Days</th><th>On the list?</th><th class="n">Chance +5%, quarter</th><th>Note</th><th>Remove</th>
+          </tr></thead><tbody id="h-body"></tbody></table></div>
+        </div>
+        <details>
+          <summary>Move holdings to another device</summary>
+          <div class="block" style="margin-top:12px">
+            <p class="cap">This text is encrypted with your passphrase. Copy it here, then paste it on the other device after unlocking there. Importing replaces that device's holdings.</p>
+            <textarea id="h-backup" readonly aria-label="Encrypted backup of your holdings"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" type="button" id="h-copy">Copy backup</button></div>
+            <label class="field" for="h-import"><span class="cap">Paste a backup from another device</span><textarea id="h-import"></textarea></label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" type="button" id="h-import-btn">Import and replace</button></div>
+            <p class="cap" id="h-backup-msg" hidden></p>
+          </div>
+        </details>
+      </section>
+
+      <!-- PAPER -->
+      <section data-panel="paper" hidden>
+        <div class="block">
+          <h2>Paper portfolio vs Nifty 50</h2>
+          <p class="cap">Equal weight across each day's list, bought at the close when a stock enters and sold at the close when it drops. Both start at 100. No costs.</p>
+          <div class="legend"><span style="--sw:var(--c0)">Paper portfolio</span><span style="--sw:var(--c1)">Nifty 50</span></div>
+          <div class="chart" id="paper-chart"></div>
+        </div>
+        <div class="block">
+          <h2>Positions</h2>
+          <div class="scroll"><table aria-label="Paper positions"><thead><tr><th>Stock</th><th>Entered</th><th class="n">Entry ₹</th><th>Exited</th><th class="n">Exit ₹</th><th class="n">Open return</th><th class="n">Closed return</th></tr></thead><tbody id="trades-body"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- BACKTEST -->
+      <section data-panel="backtest" hidden>
+        <p id="bt-intro"></p>
+        <p class="cap">Survivorship bias inflates every absolute figure: the universe is today's Nifty 500, so stocks that fell out are missing. Compare strategies with the equal-weight universe, not with zero.</p>
+        <div class="block"><h2>Strategies compared</h2>
+          <div class="scroll"><table aria-label="Backtest summary"><thead><tr><th>Strategy</th><th class="n">CAGR</th><th class="n">Worst drawdown</th><th class="n">Sharpe</th><th class="n">Total return</th><th class="n">Trades / yr</th><th class="n">Avg hold, days</th></tr></thead><tbody id="bt-sum"></tbody></table></div></div>
+        <div class="block"><h2>Growth of ₹1, log scale</h2><div class="legend" id="bt-legend"></div><div class="chart" id="bt-chart" style="min-height:340px"></div></div>
+        <div class="block"><h2>Calendar-year returns</h2><div class="scroll"><table aria-label="Calendar-year returns"><thead><tr id="cal-head"></tr></thead><tbody id="cal-body"></tbody></table></div></div>
+        <div class="block"><h2>Does the model find +5% stocks out of sample?</h2>
+          <p class="cap">Share of the model's daily top 10 that went on to gain 5%, against all stocks, in years it had not seen.</p>
+          <div class="scroll"><table aria-label="Out-of-sample hit rates"><thead><tr><th>Year</th><th class="n">Top 10, quarter</th><th class="n">All stocks, quarter</th><th class="n">Top 10, month</th><th class="n">All stocks, month</th><th class="n">AUC, quarter</th></tr></thead><tbody id="ens-body"></tbody></table></div></div>
+        <div class="block"><h2>All 42 algorithms, tested alone</h2>
+          <p class="cap">Each algorithm's top 10 every 21 sessions, 2019 onward. Lift = its +5% hit rate over the base rate.</p>
+          <div class="scroll"><table aria-label="Algorithms"><thead><tr><th>Algorithm</th><th>Family</th><th>What it measures</th><th>Buy when</th><th class="n">Hit rate</th><th class="n">Lift</th><th class="n">Excess 63d</th><th class="n">Periods beating base</th></tr></thead><tbody id="algos-body"></tbody></table></div></div>
+      </section>
+
+      <!-- METHOD -->
+      <section data-panel="method" hidden>
+        <h2>How the list is built</h2>
+        <ul class="method">
+          <li><b>Universe.</b> Current Nifty 500 constituents with market cap of at least ₹5,000 Cr, from Yahoo Finance daily prices since 2016.</li>
+          <li><b>Technical score (70%).</b> Average of two percentiles: a gradient-boosted model's chance of a 5% gain within 63 sessions, using all 42 algorithms plus market trend and breadth; and a vote of the eight algorithms that tested best on past data. Both smoothed over about 10 sessions.</li>
+          <li><b>Graham score (30%).</b> P/E ≤ 15, P/B ≤ 1.5, price below the Graham number √(22.5 × EPS × book value), current ratio ≥ 2, low debt, profits every reported year, EPS growth, unbroken dividends, and P/E and P/B well below their own recent peak. Current ratio and debt are skipped for lenders.</li>
+          <li><b>List rules.</b> Ten best combined scores, at most three per NSE industry. A listed stock stays until it falls below rank 20. New = entered today; Downgraded = score down 5+ points or rank down 5+ places since entry; Dropped = left today.</li>
+          <li><b>Privacy.</b> The data files on this site are encrypted with AES-256-GCM using a key derived from your passphrase (PBKDF2-SHA256, 600,000 rounds). Decryption happens only in your browser.</li>
+        </ul>
+        <h2>What to keep in mind</h2>
+        <ul class="method">
+          <li>Chance figures are model estimates, not promises. The Backtest tab shows how often top picks actually reached +5%.</li>
+          <li>Only the technical layer is backtested. Survivorship bias inflates backtest returns. Taxes are ignored.</li>
+          <li>Yahoo Finance data can be late or wrong for Indian stocks. Check a price before acting on it.</li>
+        </ul>
+      </section>
+      <p class="cap" id="foot"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+(() => {
+  'use strict';
+  const LS_KEY = 'np-key-v1', LS_HOLD = 'np-holdings-v1';
+  const $ = (id) => document.getElementById(id);
+  const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const b64e = (u8) => btoa(String.fromCharCode(...new Uint8Array(u8)));
+  let KEY = null, DAILY = null, BT = null, SALT = null;
+
+  // ---------- crypto ----------
+  async function deriveKey(pw, salt, iter) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  }
+  async function gunzip(buf) {
+    const ds = new DecompressionStream('gzip');
+    return new Response(new Blob([buf]).stream().pipeThrough(ds)).text();
+  }
+  async function gzip(text) {
+    const cs = new CompressionStream('gzip');
+    return new Response(new Blob([text]).stream().pipeThrough(cs)).arrayBuffer();
+  }
+  async function decryptFile(env, key) {
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(env.iv) }, key, b64d(env.ct));
+    return JSON.parse(await gunzip(pt));
+  }
+  async function encryptObj(obj, key) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, await gzip(JSON.stringify(obj)));
+    return { v: 1, iv: b64e(iv), ct: b64e(ct) };
+  }
+  const fetchEnv = (name) => fetch(`data/${name}.enc.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error('fetch ' + name); return r.json(); });
+
+  // ---------- storage helpers ----------
+  const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); return true; } catch { return false; } }, del(k) { try { localStorage.removeItem(k); } catch {} } };
+
+  // ---------- unlock ----------
+  async function unlockWith(key) {
+    const [d, b] = await Promise.all([fetchEnv('daily'), fetchEnv('backtest')]);
+    DAILY = await decryptFile(d, key); BT = await decryptFile(b, key); KEY = key;
+    $('lock').hidden = true; $('app').hidden = false; render();
+  }
+  $('unlock-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = $('pw').value; const msg = $('lock-msg'); msg.hidden = true;
+    if (!pw) return;
+    const btn = $('unlock-btn'); btn.disabled = true; btn.textContent = 'Unlocking…';
+    try {
+      const env = await fetchEnv('daily');
+      const key = await deriveKey(pw, b64d(env.salt), env.iter);
+      await unlockWith(key);
+      if ($('remember').checked) ls.set(LS_KEY, b64e(await crypto.subtle.exportKey('raw', key)));
+      $('pw').value = '';
+    } catch (err) {
+      msg.textContent = String(err).includes('fetch') ? 'Could not load the site data. Check your connection and try again.' : 'Wrong passphrase.';
+      msg.hidden = false;
+    }
+    btn.disabled = false; btn.textContent = 'Unlock';
+  });
+  $('lock-btn').addEventListener('click', () => { ls.del(LS_KEY); KEY = DAILY = BT = null; $('app').hidden = true; $('lock').hidden = false; });
+  (async () => {
+    const saved = ls.get(LS_KEY); if (!saved) return;
+    try { const key = await crypto.subtle.importKey('raw', b64d(saved), 'AES-GCM', true, ['encrypt', 'decrypt']); await unlockWith(key); }
+    catch { ls.del(LS_KEY); }
+  })();
+
+  // ---------- formatting ----------
+  const fmtDate = (s) => s ? d3.utcFormat('%-d %b %Y')(new Date(s + 'T00:00:00Z')) : '—';
+  const pct = (v, d = 0) => v == null || isNaN(v) ? '—' : (100 * v).toFixed(d) + '%';
+  const pp = (v, d = 1) => v == null || isNaN(v) ? '—' : (v > 0 ? '+' : '') + (+v).toFixed(d) + '%';
+  const num = (v, d = 0) => v == null || isNaN(v) ? '—' : (+v).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const inr = (v) => v == null || isNaN(v) ? '—' : '₹' + Math.round(v).toLocaleString('en-IN');
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const td = (tr, text, cls) => tr.appendChild(el('td', cls, text));
+  const signed = (tr, v, d = 1) => { const c = td(tr, pp(v, d), 'n'); if (v > 0) c.classList.add('pos'); if (v < 0) c.classList.add('neg'); return c; };
+  const pill = (parent, s) => parent.appendChild(el('span', 'pill ' + s, s[0] + s.slice(1).toLowerCase()));
+  const stock = (tr, sym, co) => { const c = el('td'); c.appendChild(el('span', 'sym', sym)); if (co) c.appendChild(el('span', 'sub', co)); tr.appendChild(c); return c; };
+  const bar = (tr, v) => { const c = td(tr, '', 'n'); if (v == null) { c.textContent = '—'; return c; }
+    const b = el('span', 'bar'); const i = el('i'); i.style.width = Math.max(0, Math.min(100, v)) + '%'; b.appendChild(i);
+    c.style.color = v >= 70 ? 'var(--ok)' : v >= 40 ? 'var(--warn)' : 'var(--bad)'; c.appendChild(b);
+    const t = el('span', null, Math.round(v)); t.style.color = 'var(--fg)'; c.appendChild(t); return c; };
+  const rowCls = (s) => ({ NEW: 'r-new', DOWNGRADED: 'r-down', DROPPED: 'r-drop' })[s] || '';
+  const fill = (id, rows, fn, empty, cols) => { const tb = $(id); tb.replaceChildren();
+    if (!rows || !rows.length) { const tr = el('tr'); const c = td(tr, empty, 'muted'); c.colSpan = cols; tb.appendChild(tr); return; }
+    rows.forEach((r) => tb.appendChild(fn(r))); };
+
+  // ---------- render ----------
+  function render() {
+    const info = DAILY.info[0], picks = DAILY.picks, uni = DAILY.universe || [];
+    const avg63 = d3.mean(picks, (r) => r.p63), avg21 = d3.mean(picks, (r) => r.p21);
+    $('takeaway').textContent = `As of ${fmtDate(info.as_of)}: ${info.n_new} new, ${info.n_downgraded} downgraded, ${info.n_dropped} dropped. The picks average a ${pct(avg63)} modelled chance of +5% within a quarter, against ${pct(info.universe_avg_p63)} for the average stock.`;
+    $('t-p63').textContent = pct(avg63); $('t-p63-sub').textContent = `Universe average ${pct(info.universe_avg_p63)} · long-run base rate ${pct(info.base_rate_63)}`;
+    $('t-p21').textContent = pct(avg21); $('t-p21-sub').textContent = `Universe average ${pct(info.universe_avg_p21)}`;
+    const nav = DAILY.nav; const a = nav[0], z = nav[nav.length - 1];
+    const pr = 100 * (z.nav / a.nav - 1), nr = 100 * (z.nifty / a.nifty - 1);
+    $('t-paper').textContent = pp(pr, 2); $('t-paper').className = 'big ' + (pr > 0 ? 'pos' : pr < 0 ? 'neg' : '');
+    $('t-paper-sub').textContent = `Nifty 50 ${pp(nr, 2)} over the same ${nav.length - 1} sessions`;
+    $('list-rules').textContent = `Ranked by combined score. A stock stays until it falls below rank ${info.exit_below_rank}; at most ${info.max_per_industry} per industry.`;
+    $('foot').textContent = `Data as of the ${fmtDate(info.as_of)} close · ${info.universe_size} stocks screened.`;
+
+    // changes
+    const ch = $('changes'); ch.replaceChildren();
+    const items = [...DAILY.dropped, ...picks.filter((r) => r.status === 'DOWNGRADED'), ...picks.filter((r) => r.status === 'NEW')];
+    if (picks.length && picks.every((r) => r.status === 'NEW')) ch.appendChild(el('p', 'muted', 'First run: all 10 stocks are new. From the next trading day this shows entries, downgrades and exits.'));
+    else if (!items.length) ch.appendChild(el('p', 'muted', 'No changes since the previous run. All 10 stocks were kept.'));
+    items.forEach((r) => { const box = el('div', 'change'); pill(box, r.status); box.appendChild(el('h3', null, r.symbol + (r.company ? ' · ' + r.company : '')));
+      const bits = [r.note, r.signals, r.status !== 'NEW' && r.since_entry_pct != null ? `${pp(r.since_entry_pct)} since entry on ${fmtDate(r.entry_date)}` : null].filter(Boolean);
+      box.appendChild(el('p', 'cap', bits.join(' · '))); ch.appendChild(box); });
+
+    fill('picks-body', picks, (r) => { const tr = el('tr', rowCls(r.status));
+      td(tr, r.rank, 'n'); stock(tr, r.symbol, r.company); const s = el('td'); pill(s, r.status); tr.appendChild(s);
+      td(tr, num(r.final_score, 1), 'n'); bar(tr, r.tech_score); bar(tr, r.graham_score); td(tr, pct(r.p63), 'n'); td(tr, pct(r.p21), 'n');
+      td(tr, num(r.close, 2), 'n'); signed(tr, r.since_entry_pct); td(tr, r.note || '', 'cap'); return tr; }, 'No picks.', 11);
+
+    fill('tech-body', picks, (r) => { const tr = el('tr'); stock(tr, r.symbol); bar(tr, r.tech_score); bar(tr, r.tp_ml); bar(tr, r.tp_vote);
+      ['Momentum', 'Trend', 'Breakout', 'Oscillator', 'Volatility', 'Volume'].forEach((f) => bar(tr, r['tp_fam_' + f])); td(tr, r.signals || '—', 'cap'); return tr; }, 'No picks.', 11);
+
+    const voters = (info.voters || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const desc = Object.fromEntries((BT.algos || []).map((r) => [r.algo, r]));
+    const PCT_ALGOS = new Set(['mom_12_1', 'mom_6_1', 'mom_3m', 'clenow_mom', 'rel_strength', 'roc_20', 'sma_50_200', 'px_vs_200', 'ema_20_50', 'vwap_dist', 'reversal_5d', 'low_vol']);
+    const raw = (a, v) => v == null ? '—' : PCT_ALGOS.has(a) ? pp(100 * v, 1) : num(v, Math.abs(v) >= 10 ? 0 : 2);
+    const vh = $('voters-head'); vh.replaceChildren(el('th', null, 'Stock'));
+    voters.forEach((v) => { const th = el('th', 'n'); th.appendChild(el('div', null, v)); if (desc[v]) { const d = el('div', 'sub', `${desc[v].family}: ${desc[v].description}`); d.style.whiteSpace = 'normal'; d.style.minWidth = '9em'; th.appendChild(d); } vh.appendChild(th); });
+    fill('voters-body', picks, (r) => { const tr = el('tr'); stock(tr, r.symbol); voters.forEach((v) => { const c = bar(tr, r['tp_v_' + v]); c.appendChild(el('span', 'sub', raw(v, r['tp_raw_' + v]))); }); return tr; }, 'No picks.', 9);
+
+    fill('graham-body', picks, (r) => { const tr = el('tr'); stock(tr, r.symbol); bar(tr, r.graham_score); td(tr, r.industry || '', 'cap'); td(tr, num(r.pe, 1), 'n'); td(tr, num(r.pb, 2), 'n');
+      ['g_pe', 'g_pb', 'g_graham_number', 'g_current_ratio', 'g_debt_equity', 'g_earnings_stability', 'g_eps_growth', 'g_dividends'].forEach((k) => bar(tr, r[k]));
+      [['g_pe_vs_peak', 'pe_hist', 1], ['g_pb_vs_peak', 'pb_hist', 2]].forEach(([k, h, d]) => { const c = bar(tr, r[k]);
+        c.appendChild(el('span', 'sub', r[h + '_peak'] == null ? 'no history' : `${num(r[h + '_now'], d)} / ${num(r[h + '_peak'], d)} / ${num(r[h + '_median'], d)}`)); });
+      return tr; }, 'No picks.', 15);
+
+    fill('runners-body', DAILY.runners, (r) => { const tr = el('tr'); td(tr, r.rank, 'n'); stock(tr, r.symbol, r.company); td(tr, num(r.final_score, 1), 'n'); bar(tr, r.tech_score); bar(tr, r.graham_score); td(tr, pct(r.p63), 'n'); return tr; }, 'None.', 6);
+    fill('log-body', DAILY.changes, (r) => { const tr = el('tr', rowCls(r.status)); td(tr, fmtDate(r.date)); stock(tr, r.symbol); const s = el('td'); pill(s, r.status); tr.appendChild(s);
+      td(tr, r.rank ?? '—', 'n'); td(tr, num(r.close, 2), 'n'); td(tr, r.note || '', 'cap'); td(tr, r.signals || '', 'cap'); return tr; }, 'No changes yet.', 7);
+
+    // paper
+    fill('trades-body', DAILY.trades, (r) => { const tr = el('tr'); stock(tr, r.symbol); td(tr, fmtDate(r.entry_date)); td(tr, num(r.entry_price, 2), 'n');
+      td(tr, r.exit_date ? fmtDate(r.exit_date) : 'Open'); td(tr, r.exit_price == null ? '—' : num(r.exit_price, 2), 'n'); signed(tr, r.open_return_pct, 2); signed(tr, r.return_pct, 2); return tr; }, 'No positions yet.', 7);
+
+    // backtest
+    const curves = BT.curves || [];
+    $('bt-intro').textContent = `Technical layer only, January 2019 to ${fmtDate(curves.length ? curves[curves.length - 1].date : null)}. Each year the model was retrained on earlier data only; the portfolio holds 10 stocks until they fall below rank 20, after 0.25% cost per trade side. The live list follows "Blend: ML + vote".`;
+    fill('bt-sum', BT.summary, (r) => { const tr = el('tr'); const n = td(tr, r.strategy); if (r.strategy === 'Blend: ML + vote') n.className = 'sym';
+      td(tr, pp(r['CAGR_%']), 'n'); td(tr, pp(r['max_drawdown_%']), 'n'); td(tr, num(r.sharpe, 2), 'n'); td(tr, pp(r['total_return_%'], 0), 'n'); td(tr, num(r.trades_per_year), 'n'); td(tr, num(r.avg_hold_days), 'n'); return tr; }, '—', 7);
+    const strats = [...new Set((BT.calendar || []).map((r) => r.strategy))];
+    const chd = $('cal-head'); chd.replaceChildren(el('th', null, 'Year')); strats.forEach((s) => chd.appendChild(el('th', 'n', s)));
+    fill('cal-body', d3.groups(BT.calendar || [], (r) => r.year), ([y, rows]) => { const tr = el('tr'); td(tr, y); strats.forEach((s) => { const r = rows.find((x) => x.strategy === s); signed(tr, r ? r.return_pct : null); }); return tr; }, '—', strats.length + 1);
+    fill('ens-body', BT.ensemble, (r) => { const tr = el('tr'); td(tr, r.test_year);
+      const h = td(tr, num(r['top10_hit_y63_%'], 1) + '%', 'n'); h.classList.add(r['top10_hit_y63_%'] > r['base_y63_%'] ? 'pos' : 'neg'); td(tr, num(r['base_y63_%'], 1) + '%', 'n');
+      const m = td(tr, num(r['top10_hit_y21_%'], 1) + '%', 'n'); m.classList.add(r['top10_hit_y21_%'] > r['base_y21_%'] ? 'pos' : 'neg'); td(tr, num(r['base_y21_%'], 1) + '%', 'n'); td(tr, num(r.auc_y63, 3), 'n'); return tr; }, '—', 6);
+    fill('algos-body', BT.algos, (r) => { const tr = el('tr'); td(tr, r.algo, 'sym'); td(tr, r.family); td(tr, r.description, 'cap'); td(tr, r.buy_when === 'high' ? 'High' : 'Low');
+      td(tr, num(r['hit_rate_%'], 1) + '%', 'n'); const l = td(tr, num(r.lift, 2) + '×', 'n'); l.classList.add(r.lift > 1 ? 'pos' : 'neg'); signed(tr, r['excess_63d_%'], 2); td(tr, num(r.pct_periods_beats_base, 0) + '%', 'n'); return tr; }, '—', 8);
+
+    // holdings symbols
+    const dl = $('h-syms'); dl.replaceChildren(); uni.forEach((r) => { const o = el('option'); o.value = r.symbol; o.label = r.company || r.symbol; dl.appendChild(o); });
+    renderHoldings(); drawCharts();
+  }
+
+  // ---------- charts ----------
+  const STRAT_ORDER = ['Blend: ML + vote', 'ML model (smoothed)', 'Algorithm vote (smoothed)', '12-1 momentum alone', 'ML model (raw)', 'Equal-weight universe', 'Nifty 50'];
+  const color = (i) => `var(--c${i % 7})`;
+  function line(box, series, opts) {
+    box.replaceChildren();
+    const W = Math.max(280, box.clientWidth - 16), H = opts.height || 270;
+    const all = series.flatMap((s) => s.points); if (!all.length) { box.appendChild(el('p', 'muted', 'No data yet.')); return; }
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', opts.label);
+    const x = d3.scaleUtc().domain(d3.extent(all, (p) => p.date)); const ext = d3.extent(all, (p) => p.v);
+    const pad = ext[1] === ext[0] ? 1 : (ext[1] - ext[0]) * 0.1;
+    const y = (opts.log ? d3.scaleLog().domain(ext) : d3.scaleLinear().domain([ext[0] - pad, ext[1] + pad])).nice();
+    const yf = opts.yFmt; const ticks = opts.log ? y.ticks(6).filter((t) => [1, 2, 5].includes(+String(t).replace(/[0.]/g, '')[0] || 1)) : y.ticks(5);
+    const probe = svg.append('text').text(yf(d3.max(ticks))); const ml = probe.node().getComputedTextLength() + 12; probe.remove();
+    const m = { t: 10, r: 14, b: 24, l: Math.max(36, ml) }; x.range([m.l, W - m.r]); y.range([H - m.b, m.t]);
+    svg.append('g').attr('class', 'grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues(ticks).tickSize(-(W - m.l - m.r)).tickFormat('')).call((g) => g.select('.domain').remove());
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 110))).tickSizeOuter(0));
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(yf)).call((g) => g.select('.domain').remove());
+    const ln = d3.line().x((p) => x(p.date)).y((p) => y(p.v));
+    series.forEach((s) => { svg.append('path').attr('d', ln(s.points)).attr('fill', 'none').style('stroke', s.color).attr('stroke-width', s.bold ? 2.5 : 1.5);
+      const l = s.points[s.points.length - 1]; svg.append('circle').attr('cx', x(l.date)).attr('cy', y(l.v)).attr('r', 3).style('fill', s.color); });
+    const tip = d3.select(box).append('div').attr('class', 'tip').attr('hidden', true);
+    const rule = svg.append('line').style('stroke', 'var(--muted)').attr('y1', m.t).attr('y2', H - m.b).attr('hidden', true);
+    const dates = series[0].points.map((p) => p.date); const bis = d3.bisector((d) => d).center;
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => { const [px] = d3.pointer(ev); const dt = dates[bis(dates, x.invert(px))]; if (!dt) return;
+        rule.attr('x1', x(dt)).attr('x2', x(dt)).attr('hidden', null); tip.attr('hidden', null).html('');
+        tip.append('div').text(d3.utcFormat('%-d %b %Y')(dt)); series.forEach((s) => { const p = s.points.find((q) => +q.date === +dt); if (p) tip.append('div').text(`${s.name}: ${yf(p.v)}`); });
+        const bw = box.getBoundingClientRect().width, tw = tip.node().offsetWidth; tip.style('left', Math.min(Math.max(0, x(dt) * bw / W + 12), bw - tw - 4) + 'px').style('top', '8px'); })
+      .on('pointerleave', () => { tip.attr('hidden', true); rule.attr('hidden', true); });
+  }
+  const pd = (s) => new Date(s + 'T00:00:00Z');
+  function drawCharts() {
+    if (!DAILY) return;
+    const vis = (id) => $(id).offsetParent !== null;
+    if (vis('paper-chart')) line($('paper-chart'), [
+      { name: 'Paper portfolio', color: color(0), bold: true, points: DAILY.nav.map((r) => ({ date: pd(r.date), v: +r.nav })) },
+      { name: 'Nifty 50', color: color(1), points: DAILY.nav.map((r) => ({ date: pd(r.date), v: +r.nifty })) }],
+      { label: 'Paper portfolio against Nifty 50, both from 100', yFmt: (v) => d3.format('.1f')(v) });
+    if (vis('bt-chart')) {
+      const groups = d3.groups((BT.curves || []).filter((r) => r.growth != null), (r) => r.strategy).sort((a, b) => STRAT_ORDER.indexOf(a[0]) - STRAT_ORDER.indexOf(b[0]));
+      const lg = $('bt-legend'); lg.replaceChildren();
+      groups.forEach(([s]) => { const sp = el('span', null, s); sp.style.setProperty('--sw', color(STRAT_ORDER.indexOf(s))); lg.appendChild(sp); });
+      line($('bt-chart'), groups.map(([s, rows]) => ({ name: s, color: color(STRAT_ORDER.indexOf(s)), bold: s === 'Blend: ML + vote', points: rows.map((r) => ({ date: pd(r.date), v: +r.growth })) })),
+        { label: 'Growth of one rupee per strategy, log scale', log: true, height: 340, yFmt: (v) => '₹' + d3.format('~g')(+(+v).toPrecision(2)) });
+    }
+  }
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(drawCharts, 150); });
+
+  // ---------- tabs ----------
+  function show(name) {
+    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = s.dataset.panel !== name; });
+    if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+    drawCharts();
+  }
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => show(t.dataset.tab)));
+  const h0 = location.hash.slice(1); if (['today', 'holdings', 'paper', 'backtest', 'method'].includes(h0)) show(h0);
+
+  // ---------- holdings (encrypted in localStorage) ----------
+  let HOLD = [];
+  async function loadHoldings() {
+    const s = ls.get(LS_HOLD); if (!s) return [];
+    try { return await decryptFile(JSON.parse(s), KEY); } catch { return null; }
+  }
+  async function saveHoldings(rows) {
+    const env = await encryptObj(rows, KEY); const ok = ls.set(LS_HOLD, JSON.stringify(env));
+    if (!ok) throw new Error('storage'); HOLD = rows; return env;
+  }
+  const hmsg = (text, cls) => { const m = $('h-msg'); m.textContent = text; m.className = 'cap ' + (cls || ''); m.hidden = !text; };
+  async function renderHoldings() {
+    const loaded = await loadHoldings();
+    if (loaded === null) { hmsg('Holdings on this device were saved with a different passphrase and cannot be read.', 'neg'); HOLD = []; }
+    else HOLD = loaded;
+    const u = new Map((DAILY.universe || []).map((r) => [r.symbol, r])); const asof = pd(DAILY.info[0].as_of);
+    const rows = HOLD.map((h) => { const m = u.get(h.symbol); const close = m ? +m.close : null;
+      const gain = close != null ? 100 * (close / h.price - 1) : null;
+      const flagged = m ? (['DROPPED', 'DOWNGRADED'].includes(m.status) || (!m.on_list && m.rank > 20)) : false;
+      return { ...h, m, close, gain, gain_rs: close != null && h.qty ? (close - h.price) * h.qty : null, days: Math.round((asof - pd(h.bought_on)) / 864e5), flagged }; })
+      .sort((a, b) => (b.flagged - a.flagged) || b.bought_on.localeCompare(a.bought_on));
+    fill('h-body', rows, (r) => { const tr = el('tr', r.flagged ? 'r-flag' : ''); stock(tr, r.symbol, r.m ? r.m.company : null);
+      td(tr, fmtDate(r.bought_on)); td(tr, num(r.price, 2), 'n'); td(tr, r.qty ? num(r.qty) : '—', 'n'); td(tr, r.close == null ? '—' : num(r.close, 2), 'n'); signed(tr, r.gain);
+      const g = td(tr, r.gain_rs == null ? '—' : (r.gain_rs >= 0 ? '+' : '−') + inr(Math.abs(r.gain_rs)), 'n'); if (r.gain_rs > 0) g.classList.add('pos'); if (r.gain_rs < 0) g.classList.add('neg');
+      td(tr, num(r.days), 'n');
+      const st = el('td'); if (!r.m) st.textContent = 'Not in screened universe';
+      else if (r.m.on_list || r.m.status === 'DROPPED') { pill(st, r.m.status); st.appendChild(el('span', 'sub', 'rank ' + r.m.rank)); }
+      else { st.textContent = 'Not listed · rank ' + r.m.rank; st.className = 'cap' + (r.m.rank > 20 ? ' warn' : ''); }
+      tr.appendChild(st); td(tr, r.m ? pct(r.m.p63) : '—', 'n'); td(tr, r.note || '', 'cap');
+      const c = el('td'); const b = el('button', 'link', 'Remove'); b.type = 'button'; b.setAttribute('aria-label', `Remove ${r.symbol} bought ${r.bought_on}`);
+      b.addEventListener('click', async () => { if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Confirm remove'; setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Remove'; }, 4000); return; }
+        try { await saveHoldings(HOLD.filter((x) => x.id !== r.id)); renderHoldings(); } catch { hmsg('Not removed: this browser blocked storage.', 'neg'); } });
+      c.appendChild(b); tr.appendChild(c); return tr; }, 'No holdings yet. Record your first purchase above.', 12);
+    const q = rows.filter((r) => r.qty && r.close != null); const inv = d3.sum(q, (r) => r.price * r.qty), val = d3.sum(q, (r) => r.close * r.qty);
+    $('h-invested').textContent = inr(inv); $('h-value').textContent = inr(val); $('h-asof').textContent = 'As of ' + fmtDate(DAILY.info[0].as_of);
+    const gp = inv ? 100 * (val / inv - 1) : null; $('h-gain').textContent = pp(gp); $('h-gain').className = 'big ' + (gp > 0 ? 'pos' : gp < 0 ? 'neg' : '');
+    $('h-gain-sub').textContent = `${inv ? (val - inv >= 0 ? '+' : '−') + inr(Math.abs(val - inv)) : '—'} · ${rows.filter((r) => r.flagged).length} need a look`;
+    const s = ls.get(LS_HOLD); $('h-backup').value = s ? btoa(s) : '';
+  }
+  $('hold-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const sym = $('h-sym').value.trim().toUpperCase().replace(/\.NS$/, ''), date = $('h-date').value, price = Number($('h-price').value), qtyRaw = $('h-qty').value.trim();
+    const today = new Date().toISOString().slice(0, 10);
+    if (!/^[A-Z0-9&-]{1,20}$/.test(sym) || !date || date > today || !(price > 0) || (qtyRaw && !(Number(qtyRaw) >= 1))) { hmsg('Fill in a stock, a purchase date that isn\'t in the future, and a price above zero.', 'neg'); return; }
+    const row = { id: `${sym}-${date}-${Date.now().toString(36)}`, symbol: sym, bought_on: date, price, qty: qtyRaw ? Math.round(Number(qtyRaw)) : null, note: $('h-note').value.slice(0, 140) };
+    try { await saveHoldings([...HOLD, row]); $('hold-form').reset();
+      const known = (DAILY.universe || []).some((r) => r.symbol === sym);
+      hmsg(known ? 'Saved.' : 'Saved, but this symbol isn\'t in the screened universe, so it shows without a current price.', known ? 'pos' : 'warn'); renderHoldings();
+    } catch { hmsg('That wasn\'t saved: this browser blocked storage (private window?).', 'neg'); }
+  });
+  $('h-copy').addEventListener('click', async () => { const t = $('h-backup'); const m = $('h-backup-msg');
+    try { await navigator.clipboard.writeText(t.value); m.textContent = 'Copied.'; } catch { t.select(); m.textContent = 'Select the text and copy it.'; } m.hidden = false; });
+  $('h-import-btn').addEventListener('click', async () => { const m = $('h-backup-msg'); m.hidden = false;
+    try { const env = JSON.parse(atob($('h-import').value.trim())); const rows = await decryptFile(env, KEY);
+      if (!Array.isArray(rows)) throw new Error('shape'); await saveHoldings(rows); $('h-import').value = ''; m.textContent = `Imported ${rows.length} holdings.`; renderHoldings();
+    } catch { m.textContent = 'That backup could not be read. It must come from this site, saved with the same passphrase.'; } });
+})();
+</script>
+</body>
+</html>
