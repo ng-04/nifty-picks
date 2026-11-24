@@ -180,7 +180,7 @@
       <section data-panel="holdings" hidden>
         <div class="block">
           <h2>Record a purchase</h2>
-          <p class="cap">Stored in this browser only, encrypted with your passphrase. To use another device, copy the encrypted backup below and paste it there.</p>
+          <p class="cap"><span id="h-source">Stored in this browser only.</span> Saved encrypted with your passphrase. <button class="link" type="button" id="h-reload" hidden>Reload published portfolio</button></p>
           <form class="form" id="hold-form" novalidate>
             <label class="field" for="h-sym"><span class="cap">Stock (NSE symbol)</span><input id="h-sym" type="text" list="h-syms" autocomplete="off" placeholder="e.g. PNB"></label>
             <datalist id="h-syms"></datalist>
@@ -298,7 +298,7 @@
   const $ = (id) => document.getElementById(id);
   const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
   const b64e = (u8) => btoa(String.fromCharCode(...new Uint8Array(u8)));
-  let KEY = null, DAILY = null, BT = null, SALT = null;
+  let KEY = null, DAILY = null, BT = null, SALT = null, PUB = null;
 
   // ---------- crypto ----------
   async function deriveKey(pw, salt, iter) {
@@ -331,6 +331,8 @@
   async function unlockWith(key) {
     const [d, b] = await Promise.all([fetchEnv('daily'), fetchEnv('backtest')]);
     DAILY = await decryptFile(d, key); BT = await decryptFile(b, key); KEY = key;
+    PUB = null;  // the published portfolio is optional: a missing file just means none was published
+    try { const h = await fetchEnv('holdings'); PUB = await decryptFile(h, key); } catch {}
     $('lock').hidden = true; $('app').hidden = false; render();
   }
   $('unlock-form').addEventListener('submit', async (e) => {
@@ -509,19 +511,31 @@
 
   // ---------- holdings (encrypted in localStorage) ----------
   let HOLD = [];
+  // Stored as {rows, src, edited}: src = which published portfolio it came from, edited = changed in this browser.
+  // Older backups stored a bare array; those count as edited so they are never overwritten.
+  const wrap = (v) => Array.isArray(v) ? { rows: v, src: null, edited: true } : v;
+  let META = { src: null, edited: true };
   async function loadHoldings() {
-    const s = ls.get(LS_HOLD); if (!s) return [];
-    try { return await decryptFile(JSON.parse(s), KEY); } catch { return null; }
+    const s = ls.get(LS_HOLD); if (!s) return null;
+    try { return wrap(await decryptFile(JSON.parse(s), KEY)); } catch { return 'unreadable'; }
   }
-  async function saveHoldings(rows) {
-    const env = await encryptObj(rows, KEY); const ok = ls.set(LS_HOLD, JSON.stringify(env));
+  async function saveHoldings(rows, meta) {
+    META = meta || { src: META.src, edited: true };
+    const env = await encryptObj({ rows, ...META }, KEY); const ok = ls.set(LS_HOLD, JSON.stringify(env));
     if (!ok) throw new Error('storage'); HOLD = rows; return env;
   }
+  async function usePublished() { await saveHoldings(PUB.rows, { src: PUB.updated, edited: false }); }
   const hmsg = (text, cls) => { const m = $('h-msg'); m.textContent = text; m.className = 'cap ' + (cls || ''); m.hidden = !text; };
   async function renderHoldings() {
-    const loaded = await loadHoldings();
-    if (loaded === null) { hmsg('Holdings on this device were saved with a different passphrase and cannot be read.', 'neg'); HOLD = []; }
-    else HOLD = loaded;
+    let loaded = await loadHoldings();
+    if (loaded === 'unreadable') { hmsg('Holdings on this device were saved with a different passphrase and cannot be read.', 'neg'); loaded = null; }
+    // take the published portfolio when this browser has none, or has an unedited older copy of it
+    if (PUB && (!loaded || (!loaded.edited && loaded.src !== PUB.updated))) {
+      try { await usePublished(); loaded = { rows: PUB.rows, src: PUB.updated, edited: false }; } catch { loaded = { rows: PUB.rows, src: PUB.updated, edited: false }; }
+    }
+    HOLD = loaded ? loaded.rows : []; META = loaded ? { src: loaded.src, edited: loaded.edited } : { src: null, edited: true };
+    $('h-source').textContent = PUB ? (META.edited ? `Edited in this browser. The published portfolio (updated ${fmtDate(PUB.updated.slice(0, 10))}) is not applied over your edits.` : `Showing the published portfolio, updated ${fmtDate(PUB.updated.slice(0, 10))}.`) : 'Stored in this browser only.';
+    $('h-reload').hidden = !(PUB && META.edited);
     const u = new Map((DAILY.universe || []).map((r) => [r.symbol, r])); const asof = pd(DAILY.info[0].as_of);
     const rows = HOLD.map((h) => { const m = u.get(h.symbol); const close = m ? +m.close : null;
       const gain = close != null ? 100 * (close / h.price - 1) : null;
@@ -579,11 +593,14 @@
       hmsg(known ? 'Saved.' : 'Saved, but this symbol isn\'t in the screened universe, so it shows without a current price.', known ? 'pos' : 'warn'); renderHoldings();
     } catch { hmsg('That wasn\'t saved: this browser blocked storage (private window?).', 'neg'); }
   });
+  $('h-reload').addEventListener('click', async () => {
+    const b = $('h-reload'); if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Confirm: replace this browser\'s holdings'; setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Reload published portfolio'; }, 4000); return; }
+    try { await usePublished(); hmsg('Reloaded the published portfolio.', 'pos'); renderHoldings(); } catch { hmsg('Not reloaded: this browser blocked storage.', 'neg'); } });
   $('h-copy').addEventListener('click', async () => { const t = $('h-backup'); const m = $('h-backup-msg');
     try { await navigator.clipboard.writeText(t.value); m.textContent = 'Copied.'; } catch { t.select(); m.textContent = 'Select the text and copy it.'; } m.hidden = false; });
   $('h-import-btn').addEventListener('click', async () => { const m = $('h-backup-msg'); m.hidden = false;
-    try { const env = JSON.parse(atob($('h-import').value.trim())); const rows = await decryptFile(env, KEY);
-      if (!Array.isArray(rows)) throw new Error('shape'); await saveHoldings(rows); $('h-import').value = ''; m.textContent = `Imported ${rows.length} holdings.`; renderHoldings();
+    try { const env = JSON.parse(atob($('h-import').value.trim())); const got = wrap(await decryptFile(env, KEY)); const rows = got.rows;
+      if (!Array.isArray(rows)) throw new Error('shape'); await saveHoldings(rows, { src: got.src, edited: true }); $('h-import').value = ''; m.textContent = `Imported ${rows.length} holdings.`; renderHoldings();
     } catch { m.textContent = 'That backup could not be read. It must come from this site, saved with the same passphrase.'; } });
 })();
 </script>
