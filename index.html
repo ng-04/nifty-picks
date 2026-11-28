@@ -390,7 +390,7 @@
     const pr = 100 * (z.nav / a.nav - 1), nr = 100 * (z.nifty / a.nifty - 1);
     $('t-paper').textContent = pp(pr, 2); $('t-paper').className = 'big ' + (pr > 0 ? 'pos' : pr < 0 ? 'neg' : '');
     $('t-paper-sub').textContent = `Nifty 50 ${pp(nr, 2)} over the same ${nav.length - 1} sessions`;
-    $('list-rules').textContent = `Ranked by combined score. A stock stays until it falls below rank ${info.exit_below_rank}; at most ${info.max_per_industry} per industry.`;
+    $('list-rules').textContent = `Ranked by combined score. A stock stays until it falls below rank ${info.exit_below_rank}; at most ${info.max_per_industry} per industry. A downgraded stock stays, moved to the bottom, but no longer takes one of the 10 places: the next-ranked stock is added as new.`;
     $('foot').textContent = `Data as of the ${fmtDate(info.as_of)} close · ${info.universe_size} stocks screened.`;
 
     // changes
